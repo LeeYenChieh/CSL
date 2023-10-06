@@ -2,6 +2,11 @@ import cv2
 import numpy as np
 import time
 import math
+from PIL import Image
+from transformers import pipeline
+
+# digit classification model
+pipe = pipeline("image-classification", model="farleyknight/mnist-digit-classification-2022-09-04")
 
 # Choose your webcam: 0, 1, ...
 cap = cv2.VideoCapture(0)
@@ -10,6 +15,8 @@ fps = 60
 dist_thres = 50   # maximum distance to be identified as the same finger
 line_thickness = 50
 finger_hp = 5
+frames_per_detection = 10
+frame_count = 0
 
 def nothing(x):
 	pass
@@ -87,13 +94,21 @@ while(True):
 	# cv2.imshow("Red",cv2.merge([zeros,zeros,r]))
 	# cv2.imshow("Green",cv2.merge([zeros,g,zeros]))
 	# cv2.imshow("Blue",cv2.merge([b_inv,zeros,zeros]))
+
+    # digit classification
+	frame_count += 1
+	if(frame_count == frames_per_detection):
+		pil_img = Image.fromarray(cv2.cvtColor(display, cv2.COLOR_BGR2RGB))
+		predictions = pipe(pil_img)
+		print(max(predictions, key=lambda x: x['score'])['label'])
+		frame_count = 0
 	cv2.imshow("result",display)
 
 	# Press q to quit
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
 	
-	# time.sleep(1./60)
+	time.sleep(1./60)
 
 # Release the camera
 cap.release()
