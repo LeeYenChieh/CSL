@@ -19,6 +19,7 @@ finger_hp = 5
 frames_per_detection = 30
 frame_count = 0
 predicted_digit = 1
+current_id = 0
 
 def nothing(x):
 	pass
@@ -33,8 +34,9 @@ cv2.createTrackbar('R','Threshold Sliders',59,255,nothing)
 cv2.createTrackbar('G','Threshold Sliders',71,255,nothing)
 cv2.createTrackbar('B','Threshold Sliders',74,255,nothing)
 
-# a list of finger: a finger is a dictionary with key "hp" record its hp, delete the finger when hp reach 0. 
-# and key "pos" which is a list recording its positions in all time frame
+# a list of finger: a finger is a dictionary with key "id" record its id, 
+# key "hp" record its hp, delete the finger when its hp reaches 0. 
+# key "pos" is a list recording its positions in all the time frame
 # a finger is removed from the list if it is not detected for {hp} frames.
 fingers = []
 
@@ -83,7 +85,8 @@ while(True):
 					break
             
 			if is_new:
-				fingers.append({"hp": finger_hp, "pos": [center]})
+				fingers.append({"id": current_id, "hp": finger_hp, "pos": [center]})
+				current_id += 1
 				
 	# Draw the lines
 	for finger in fingers:
@@ -91,6 +94,8 @@ while(True):
 			if i == 0:
 				continue
 			cv2.line(display, finger["pos"][i-1], finger["pos"][i], (255, 255, 255), line_thickness)
+			if i == len(finger["pos"]) - 1:
+				cv2.putText(display, f"id: {finger['id']}", pos, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
 				
     # Remove finger that has not been detected in this frame
 	for i, finger in enumerate(fingers):
