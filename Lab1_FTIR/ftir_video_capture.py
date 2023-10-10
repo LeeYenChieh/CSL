@@ -4,22 +4,29 @@ import time
 import math
 from PIL import Image
 from transformers import pipeline
+import threading
 
 # digit classification model
 pipe = pipeline("image-classification", model="farleyknight/mnist-digit-classification-2022-09-04")
 
 # Choose your webcam: 0, 1, ...
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(0)
 
 fps = 60
 dist_thres = 100   # maximum distance to be identified as the same finger
 line_thickness = 50
 finger_hp = 5
-frames_per_detection = 10
+frames_per_detection = 30
 frame_count = 0
+predicted_digit = 1
 
 def nothing(x):
 	pass
+
+def predict_digit(pil_img):
+	global predicted_digit
+	predictions = pipe(pil_img)
+	predicted_digit = max(predictions, key=lambda x: x['score'])['label']
 
 cv2.namedWindow('Threshold Sliders')
 cv2.createTrackbar('R','Threshold Sliders',59,255,nothing)
@@ -92,25 +99,28 @@ while(True):
 		finger["hp"] -= 1
 
 	frame_count += 1
-	if(frame_count == frames_per_detection):
+	if frame_count == frames_per_detection:
 		pil_img = Image.fromarray(cv2.cvtColor(display, cv2.COLOR_BGR2RGB))
-		predictions = pipe(pil_img)
-		print(max(predictions, key=lambda x: x['score'])['label'])
+		thr = threading.Thread(target=predict_digit, args=(pil_img,))
+		thr.start()
 		frame_count = 0
+		
+	if len(fingers) != 0:
+		cv2.putText(display, f"Digit: {predicted_digit}", (10, 40), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
 		
 	# Show the frame
 	zeros = np.zeros(frame.shape[:2],dtype="uint8")
 	cv2.imshow('frame', frame)
-	cv2.imshow("Red",cv2.merge([zeros,zeros,r]))
-	cv2.imshow("Green",cv2.merge([zeros,g_inv,zeros]))
-	cv2.imshow("Blue",cv2.merge([b_inv,zeros,zeros]))
+	# cv2.imshow("Red",cv2.merge([zeros,zeros,r]))
+	# cv2.imshow("Green",cv2.merge([zeros,g_inv,zeros]))
+	# cv2.imshow("Blue",cv2.merge([b_inv,zeros,zeros]))
 	cv2.imshow("result",display)
 
 	# Press q to quit
 	if cv2.waitKey(1) & 0xFF == ord('q'):
 		break
 	
-	time.sleep(1./60)
+	# time.sleep(1./fps)
 
 # Release the camera
 cap.release()
