@@ -91,12 +91,18 @@ while(True):
 				
 	# Draw the lines
 	for finger in fingers:
+		operation = 'None'
+		finger_length = len(finger["pos"])
+		if finger_length < 5:
+			operation = 'tap'
+		else:
+			operation = 'Long press'
 		for i, pos in enumerate(finger["pos"]):
 			if i == 0:
 				continue
 			cv2.line(display, finger["pos"][i-1], finger["pos"][i], (255, 255, 255), line_thickness)
 			if i == len(finger["pos"]) - 1:
-				cv2.putText(display, f"id: {finger['id']}", pos, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
+				cv2.putText(display, f"id: {finger['id']}, operation = {operation}", pos, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
 				
     # Remove finger that has not been detected in this frame
 	for i, finger in enumerate(fingers):
