@@ -10,7 +10,7 @@ import threading
 pipe = pipeline("image-classification", model="farleyknight/mnist-digit-classification-2022-09-04")
 
 # Choose your webcam: 0, 1, ...
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(2)
 
 fps = 60
 dist_thres = 100   # maximum distance to be identified as the same finger
@@ -21,7 +21,7 @@ frame_count = 0
 predicted_digit = 1
 current_id = 0
 tap_timestamps = []
-double_tap_threshold = 0.5
+double_tap_threshold = 5
 
 def nothing(x):
 	pass
@@ -88,38 +88,47 @@ while(True):
 					break
             
 			if is_new:
-				fingers.append({"id": current_id, "hp": finger_hp, "pos": [center]})
+				fingers.append({"id": current_id, "hp": finger_hp, "pos": [center], "operation": 'None'})
 				current_id += 1
 				
 	# Draw the lines
-	last_operation = 'None'
 	operation = 'None'
+	xbias = 0
+	ybias = 0
 	for finger in fingers:
 		operation = 'None'
 		finger_length = len(finger["pos"])
 		if finger_length < 10:
 			operation = 'tap'
-			tap_timestamps.append(time.time())
-			if last_operation == 'tap':
-				if len(tap_timestamps) >= 2 and tap_timestamps[-1] - tap_timestamps[-2] <= double_tap_threshold:
-					operation = 'double tap'
-		elif finger_length >= 10 and finger_length < 15:
+			if len(tap_timestamps) >= 1 and time.time() - tap_timestamps[-1] <= double_tap_threshold:
+				operation = 'double tap'
+		else:
 			operation = 'Long press'
 		for i, pos in enumerate(finger["pos"]):
 			if i == 0:
 				continue
 			cv2.line(display, finger["pos"][i-1], finger["pos"][i], (255, 255, 255), line_thickness)
+			xbias += abs(finger["pos"][i][0] - finger["pos"][i - 1][0])
+			ybias += abs(finger["pos"][i][1] - finger["pos"][i - 1][1])
 			if i == len(finger["pos"]) - 1:
-				cv2.putText(display, f"id: {finger['id']}, operation = {operation}", pos, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
-		last_operation = operation
+				if operation == 'Long press' and xbias >= 100:
+					operation = 'swipe'
+				elif operation == 'Long press' and ybias >= 75:
+					operation = 'scroll'
+				finger["operation"] = operation
+				cv2.putText(display, f"id: {finger['id']}, {operation}", pos, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
+
 
     # Remove finger that has not been detected in this frame
 	for i, finger in enumerate(fingers):
 		if finger["hp"] <= 0:
+			print(time.time())
+			if finger['operation'] == 'tap':
+				tap_timestamps.append(time.time())
 			del fingers[i]
 		finger["hp"] -= 1
 	
-
+	
 
 	frame_count += 1
 	if frame_count == frames_per_detection:
