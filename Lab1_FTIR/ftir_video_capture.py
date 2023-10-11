@@ -10,7 +10,7 @@ import threading
 pipe = pipeline("image-classification", model="farleyknight/mnist-digit-classification-2022-09-04")
 
 # Choose your webcam: 0, 1, ...
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(2)
 
 fps = 60
 dist_thres = 100   # maximum distance to be identified as the same finger
@@ -30,7 +30,7 @@ def predict_digit(pil_img):
 	predicted_digit = max(predictions, key=lambda x: x['score'])['label']
 
 cv2.namedWindow('Threshold Sliders')
-cv2.createTrackbar('R','Threshold Sliders',59,255,nothing)
+cv2.createTrackbar('R','Threshold Sliders',24,255,nothing)
 cv2.createTrackbar('G','Threshold Sliders',71,255,nothing)
 cv2.createTrackbar('B','Threshold Sliders',74,255,nothing)
 
@@ -60,6 +60,7 @@ while(True):
 	result = cv2.bitwise_and(result,g_inv,mask=None)
 	result = cv2.blur(result,(5,5))
 	_,result = cv2.threshold(result,128,255,cv2.THRESH_BINARY)
+	result = cv2.flip(result,1)
 
 	# Find and draw contours
 	contours, hierarchy = cv2.findContours(result,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
