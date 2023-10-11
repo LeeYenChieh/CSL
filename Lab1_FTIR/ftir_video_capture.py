@@ -6,6 +6,8 @@ from PIL import Image
 from transformers import pipeline
 import threading
 
+INF = 6666666666
+
 # digit classification model
 pipe = pipeline("image-classification", model="farleyknight/mnist-digit-classification-2022-09-04")
 
@@ -22,6 +24,7 @@ predicted_digit = 1
 current_id = 0
 tap_timestamps = []
 double_tap_threshold = 5
+rotate_threshold = 0.5
 
 def nothing(x):
 	pass
@@ -30,6 +33,12 @@ def predict_digit(pil_img):
 	global predicted_digit
 	predictions = pipe(pil_img)
 	predicted_digit = max(predictions, key=lambda x: x['score'])['label']
+
+def calculate_slope(x1, y1, x2, y2):
+	if x2 - x1 == 0:
+		return INF
+	return (y2 - y1) / (x2 - x1)
+		
 
 cv2.namedWindow('Threshold Sliders')
 cv2.createTrackbar('R','Threshold Sliders',24,255,nothing)
@@ -117,12 +126,31 @@ while(True):
 					operation = 'scroll'
 				finger["operation"] = operation
 				cv2.putText(display, f"id: {finger['id']}, {operation}", pos, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
+	extra_operation = 'None'
+	if len(fingers) == 2:
+		finger1 = fingers[0]
+		finger2 = fingers[1]
+		initial_dist = math.dist(finger1["pos"][0], finger2["pos"][0])
+		final_dist = math.dist(finger1["pos"][-1], finger2["pos"][-1])
+		if final_dist > initial_dist:
+			extra_operation = 'zoom in'
+		elif final_dist < initial_dist:
+			extra_operation = 'zoom out'
+		
+		min_length = min(len(finger1["pos"]), len(finger2["pos"]))
+		if min_length > 3:
+			#print(len(finger1["pos"]), len(finger2["pos"]))
+			initial_slope = calculate_slope(finger1["pos"][0][0], finger1["pos"][0][1], finger2["pos"][1][0], finger2["pos"][1][1])
+			final_slope = calculate_slope(finger1["pos"][-1][0], finger1["pos"][-1][1], finger2["pos"][-2][0], finger2["pos"][-2][1])
+
+			if (abs(initial_slope - final_slope) > rotate_threshold):
+				extra_operation = 'rotate'
 
 
     # Remove finger that has not been detected in this frame
 	for i, finger in enumerate(fingers):
 		if finger["hp"] <= 0:
-			print(time.time())
+			# print(time.time())
 			if finger['operation'] == 'tap':
 				tap_timestamps.append(time.time())
 			del fingers[i]
@@ -138,8 +166,11 @@ while(True):
 		frame_count = 0
 		
 	if len(fingers) != 0:
-		cv2.putText(display, f"Digit: {predicted_digit}", (10, 40), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
-		
+		if extra_operation != 'None':
+			cv2.putText(display, f"Digit: {predicted_digit}, {extra_operation}", (10, 40), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
+		else:
+			cv2.putText(display, f"Digit: {predicted_digit}", (10, 40), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
+
 	# Show the frame
 	zeros = np.zeros(frame.shape[:2],dtype="uint8")
 	cv2.imshow('frame', frame)
