@@ -10,7 +10,7 @@ import threading
 pipe = pipeline("image-classification", model="farleyknight/mnist-digit-classification-2022-09-04")
 
 # Choose your webcam: 0, 1, ...
-cap = cv2.VideoCapture(2)
+cap = cv2.VideoCapture(0)
 
 fps = 60
 dist_thres = 100   # maximum distance to be identified as the same finger
@@ -20,6 +20,8 @@ frames_per_detection = 30
 frame_count = 0
 predicted_digit = 1
 current_id = 0
+tap_timestamps = []
+double_tap_threshold = 0.5
 
 def nothing(x):
 	pass
@@ -90,33 +92,34 @@ while(True):
 				current_id += 1
 				
 	# Draw the lines
+	last_operation = 'None'
+	operation = 'None'
 	for finger in fingers:
 		operation = 'None'
-		xbias = 0
-		ybias = 0
 		finger_length = len(finger["pos"])
-		if finger_length < 5:
+		if finger_length < 10:
 			operation = 'tap'
-		else:
+			tap_timestamps.append(time.time())
+			if last_operation == 'tap':
+				if len(tap_timestamps) >= 2 and tap_timestamps[-1] - tap_timestamps[-2] <= double_tap_threshold:
+					operation = 'double tap'
+		elif finger_length >= 10 and finger_length < 15:
 			operation = 'Long press'
 		for i, pos in enumerate(finger["pos"]):
 			if i == 0:
 				continue
 			cv2.line(display, finger["pos"][i-1], finger["pos"][i], (255, 255, 255), line_thickness)
-			xbias += abs(finger["pos"][i][0] - finger["pos"][i - 1][0])
-			ybias += abs(finger["pos"][i][1] - finger["pos"][i - 1][1])
 			if i == len(finger["pos"]) - 1:
-				if operation == 'Long press' and xbias > 50:
-					operation = 'swipe'
-				elif operation == 'Long press' and xbias <= 50 and ybias > 50:
-					operation = 'scroll'
-				cv2.putText(display, f"id: {finger['id']}, {operation}", pos, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
-				
+				cv2.putText(display, f"id: {finger['id']}, operation = {operation}", pos, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, (242, 110, 53), 1, cv2.LINE_AA)
+		last_operation = operation
+
     # Remove finger that has not been detected in this frame
 	for i, finger in enumerate(fingers):
 		if finger["hp"] <= 0:
 			del fingers[i]
 		finger["hp"] -= 1
+	
+
 
 	frame_count += 1
 	if frame_count == frames_per_detection:
