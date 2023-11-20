@@ -18,7 +18,7 @@ float ypr[3];
 // ================================================================
 float error;
 float prev_error;
-float kp = 0; 
+float kp = 200; 
 float ki = 0;  
 float kd = 0;
 int dt = 10;
@@ -48,12 +48,12 @@ void setup() {
   mpu.initialize();
   mpu.dmpInitialize();
   // set the offsets here
-  mpu.setXAccelOffset(-1343);
-  mpu.setYAccelOffset(-1155);
-  mpu.setZAccelOffset(1033);
-  mpu.setXGyroOffset(19);
-  mpu.setYGyroOffset(-27);
-  mpu.setZGyroOffset(16);
+  mpu.setXAccelOffset(-1767);
+  mpu.setYAccelOffset(1374);
+  mpu.setZAccelOffset(2463);
+  mpu.setXGyroOffset(38);
+  mpu.setYGyroOffset(-10);
+  mpu.setZGyroOffset(17);
   mpu.setDMPEnabled(true);
   packetSize = mpu.dmpGetFIFOPacketSize();
   fifoCount = mpu.getFIFOCount();
@@ -86,13 +86,13 @@ void loop() {
       mpu.dmpGetGravity(&gravity, &q);
       mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 
-//      Serial.print("ypr\t");
-//      Serial.print(ypr[0]*180/PI);
-//      Serial.print("\t");
-//      Serial.print(ypr[1]*180/PI);
-//      Serial.print("\t");
-//      Serial.print(ypr[2]*180/PI);
-//      Serial.println();
+      Serial.print("ypr\t");
+      Serial.print(ypr[0]*180/PI);
+      Serial.print("\t");
+      Serial.print(ypr[1]*180/PI);
+      Serial.print("\t");
+      Serial.print(ypr[2]*180/PI);
+      // Serial.println();
       
       float currentTime = millis();
       if (currentTime > time + dt) {
@@ -117,10 +117,12 @@ void loop() {
           digitalWrite(in1, HIGH);
           digitalWrite(in2, LOW);
         }
-        
         // send PWM signal
         analogWrite(enA, speed);
       }
+      Serial.print("\t");
+      Serial.print(PID);
+      Serial.println();
     }
   }
 
