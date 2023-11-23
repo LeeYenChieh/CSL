@@ -18,9 +18,9 @@ float ypr[3];
 // ================================================================
 float error;
 float prev_error;
-float kp = 200; 
-float ki = 0;  
-float kd = 0;
+float kp = 5.0; 
+float ki = 0.01;  
+float kd = 60;
 int dt = 10;
 float setPoint = 0;
 float P, I, D, PID;
@@ -48,12 +48,12 @@ void setup() {
   mpu.initialize();
   mpu.dmpInitialize();
   // set the offsets here
-  mpu.setXAccelOffset(-1767);
-  mpu.setYAccelOffset(1374);
-  mpu.setZAccelOffset(2463);
-  mpu.setXGyroOffset(38);
-  mpu.setYGyroOffset(-10);
-  mpu.setZGyroOffset(17);
+  mpu.setXAccelOffset(31);
+  mpu.setYAccelOffset(1703);
+  mpu.setZAccelOffset(831);
+  mpu.setXGyroOffset(30);
+  mpu.setYGyroOffset(-12);
+  mpu.setZGyroOffset(24);
   mpu.setDMPEnabled(true);
   packetSize = mpu.dmpGetFIFOPacketSize();
   fifoCount = mpu.getFIFOCount();
@@ -103,7 +103,7 @@ void loop() {
         I += ki * error;
 //        I = (abs(error) < someThreshold) ? I + ki * error : 0;  <- Or you can set a threshold to only consider small erorrs
         D = kd * ((error - prev_error) / dt);
-        PID = constrain(P + I + D, -255, 255);
+        PID = constrain(P + I + D, -256, 256);
         if (isnan(PID)) PID = 0;
 
         prev_error = error;

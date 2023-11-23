@@ -1,4 +1,5 @@
 # LAB05 Report
+- [https://youtu.be/nNYZU5M8xDU?feature=shared](https://youtu.be/nNYZU5M8xDU?feature=shared)
 ## What We've learned in this lab
 - 如何調整PID control
 - PID control的原理
