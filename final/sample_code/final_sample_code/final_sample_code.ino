@@ -46,12 +46,18 @@ int servo_output = 0;
 // GND -> GND
 // OUT1 & OUT2 -> DC Motor
 
+#define FORWARD 0
+#define BACKWARD 1
+
 // int dc_dir = 0;
 // int dc_output = 255;
 int highSpeed = 240;
 int lowSpeed = 100;
+int backSpeed = 200;
 int currentSpeed = highSpeed;
-int switchTime = 200; // switch between high spd and low spd to slow down
+int highSpeedTime = 300;
+int lowSpeedTime = 500;
+int switchTime = highSpeedTime; // switch between high spd and low spd to slow down
 
 // degree
 // track3: 26, 103, 179
@@ -104,9 +110,9 @@ void loop() {
   if(on_track == 1)
     adjustState(leftTrack, midTrack, rightTrack);
   if(state == TURNLEFT)
-    currentDegree = max(currentDegree - 2, leftDegree);
+    currentDegree = max(currentDegree - 1, leftDegree);
   else if(state == TURNRIGHT)
-    currentDegree = min(currentDegree + 2, rightDegree);
+    currentDegree = min(currentDegree + 1, rightDegree);
   else if(state == GOSTRAIGHT)
     currentDegree = towardsStraight(currentDegree);
 
@@ -123,8 +129,9 @@ void loop() {
     // stop
     stripCount = 0;
     stopTime = 3000;
+    // reset currentSpeed to highSpeed to boost start
     currentSpeed = highSpeed;
-    switchTime = 300;
+    switchTime = highSpeedTime;
   }
 
   /* Set DC motor direction and power */
@@ -136,31 +143,34 @@ void loop() {
   else
   {
     // move
-    setDirection(0);
+    setDirection(FORWARD);
     analogWrite(ENA, currentSpeed);
-    switchTime -= 8;
+    switchTime -= 9;
     if(switchTime < 0)
     {
       if(currentSpeed == highSpeed)
       {
         currentSpeed = lowSpeed;
-        switchTime = 500;
+        switchTime = lowSpeedTime;
       }
       else
       {
         currentSpeed = highSpeed;
-        switchTime = 300;
+        switchTime = highSpeedTime;
       }
     }
   }
   
+  if(stopTime <= 0)
+    goBackIfNeeded();
+  
   // loop time is about 3ms
-  stopTime -= 8;
+  stopTime -= 9;
   delay(5);
 }
 
 void setDirection(int dir){
-  // 1 = forward, 0 = backward
+  // 0 = forward, 1 = backward
   if (dir == 0){
     digitalWrite(IN1, HIGH);
     digitalWrite(IN2, LOW);
@@ -216,4 +226,21 @@ int towardsStraight(int degree)
     return degree - 1;
   else
     return degree;
+}
+
+void goBackIfNeeded()
+{
+  int leftTrack = getTrackType(analogRead(ir_sensor1));
+  int midTrack = getTrackType(analogRead(ir_sensor2));
+  int rightTrack = getTrackType(analogRead(ir_sensor3));
+  while(leftTrack == GREY && midTrack == GREY && rightTrack == GREY)
+  {
+    setDirection(BACKWARD);
+    myservo.write(straightDegree);
+    analogWrite(ENA, backSpeed);
+
+    leftTrack = getTrackType(analogRead(ir_sensor1));
+    midTrack = getTrackType(analogRead(ir_sensor2));
+    rightTrack = getTrackType(analogRead(ir_sensor3));
+  } 
 }
