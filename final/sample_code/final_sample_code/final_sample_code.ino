@@ -61,17 +61,20 @@ int switchTime = highSpeedTime; // switch between high spd and low spd to slow d
 
 // degree
 // track3: 26, 103, 179
-// usual: 65, 103, 140
-int straightDegree = 103;
-int leftDegree = 26;
-int rightDegree = 179;
-int currentDegree = 103;
+// usual: 45, 83, 120
+int straightDegree = 93;
+int leftDegree = 55;
+int rightDegree = 130;
+int currentDegree = straightDegree;
 
 // states
 #define GOSTRAIGHT 0
 #define TURNLEFT 1
 #define TURNRIGHT 2
 int state = GOSTRAIGHT;
+
+// frame rate
+int delayTime = 10;
 
 void setup() {
   /****** IR Sensor ******/
@@ -145,7 +148,7 @@ void loop() {
     // move
     setDirection(FORWARD);
     analogWrite(ENA, currentSpeed);
-    switchTime -= 9;
+    switchTime -= (delayTime + 4);
     if(switchTime < 0)
     {
       if(currentSpeed == highSpeed)
@@ -161,12 +164,12 @@ void loop() {
     }
   }
   
-  if(stopTime <= 0)
-    goBackIfNeeded();
+  // if(stopTime <= 0)
+  //   goBackIfNeeded();
   
-  // loop time is about 3ms
-  stopTime -= 9;
-  delay(5);
+  // loop time is about 4ms
+  stopTime -= (delayTime + 4);
+  delay(delayTime);
 }
 
 void setDirection(int dir){
@@ -236,7 +239,7 @@ void goBackIfNeeded()
   while(leftTrack == GREY && midTrack == GREY && rightTrack == GREY)
   {
     setDirection(BACKWARD);
-    myservo.write(straightDegree);
+    // myservo.write(straightDegree);
     analogWrite(ENA, backSpeed);
 
     leftTrack = getTrackType(analogRead(ir_sensor1));
