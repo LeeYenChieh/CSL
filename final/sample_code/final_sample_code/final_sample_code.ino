@@ -25,6 +25,10 @@
 #define GREY 2
 #define AIR 3
 
+#define LEFT 0
+#define MID 1
+#define RIGHT 2
+
 int stripCount = 0;
 int prevTrack;
 int stopTime = 0;
@@ -51,19 +55,19 @@ int servo_output = 0;
 
 // int dc_dir = 0;
 // int dc_output = 255;
-int highSpeed = 240;
-int lowSpeed = 100;
-int backSpeed = 200;
+int highSpeed = 255;
+int lowSpeed = 50;
+int backSpeed = 100;
 int currentSpeed = highSpeed;
 int highSpeedTime = 300;
-int lowSpeedTime = 500;
+int lowSpeedTime = 600;
 int switchTime = highSpeedTime; // switch between high spd and low spd to slow down
 
 // degree
 // track3: 26, 103, 179
-// usual: 45, 83, 120
-int straightDegree = 93;
-int leftDegree = 55;
+// usual: 65, 103, 140
+int straightDegree = 90;
+int leftDegree = 50;
 int rightDegree = 130;
 int currentDegree = straightDegree;
 
@@ -74,7 +78,7 @@ int currentDegree = straightDegree;
 int state = GOSTRAIGHT;
 
 // frame rate
-int delayTime = 10;
+int delayTime = 1;
 
 void setup() {
   /****** IR Sensor ******/
@@ -97,16 +101,20 @@ void setup() {
 }
 
 void loop() {
+  // myservo.write((servo_output += 10) % 180);
+  // delay(1000);
+
   /* Read from the IR Sensor */
   int left = analogRead(ir_sensor1);
   int mid = analogRead(ir_sensor2);
   int right = analogRead(ir_sensor3);
-  Serial.println("Left: " + (String)left + ", Mid: " + (String)mid + ", Right: " + (String)right + ", currentDegree: " + (String)currentDegree);
+  if(stopTime <= 0)
+    Serial.println("Left: " + (String)left + ", Mid: " + (String)mid + ", Right: " + (String)right + ", currentDegree: " + (String)currentDegree);
 
   /* Rotate the servo motor (by degree) */
-  int leftTrack = getTrackType(left);
-  int midTrack = getTrackType(mid);
-  int rightTrack = getTrackType(right);
+  int leftTrack = getTrackType(left, LEFT);
+  int midTrack = getTrackType(mid, MID);
+  int rightTrack = getTrackType(right, RIGHT);
 
   int on_track = 1 - notOnTrack(leftTrack, midTrack, rightTrack);
 
@@ -121,7 +129,7 @@ void loop() {
 
   myservo.write(currentDegree);
 
-  if((midTrack == BLACK && prevTrack == WHITE) || (midTrack == WHITE && prevTrack == BLACK))
+  if(stopTime > 0 && ((midTrack == BLACK && prevTrack == WHITE) || (midTrack == WHITE && prevTrack == BLACK)))
   {
     stripCount++;
     prevTrack = midTrack;
@@ -130,6 +138,7 @@ void loop() {
   if(stripCount == 20)
   {
     // stop
+    Serial.println("Stop");
     stripCount = 0;
     stopTime = 3000;
     // reset currentSpeed to highSpeed to boost start
@@ -148,6 +157,7 @@ void loop() {
     // move
     setDirection(FORWARD);
     analogWrite(ENA, currentSpeed);
+    Serial.println("CurrentSpeed: " + String(currentSpeed));
     switchTime -= (delayTime + 4);
     if(switchTime < 0)
     {
@@ -183,16 +193,30 @@ void setDirection(int dir){
   }
 }
 
-int getTrackType(int value) {
-    // white = 0, black = 1, gray = 2, otherwise = 3
-    if(value < 38)
-        return WHITE;
-    else if(value < 200)
-        return GREY;
-    else if(value < 800)
-        return BLACK;
+int getTrackType(int value, int direction) {
+    // direction: mid = 0, left = 1, right = 2
+    if(direction == LEFT || direction == MID)
+    {
+      if(value < 38)
+          return WHITE;
+      else if(value < 100)
+          return GREY;
+      else if(value < 800)
+          return BLACK;
+      else
+          return AIR;
+    }
     else
+    {
+      if(value < 50)
+        return WHITE;
+      else if(value < 300)
+        return GREY;
+      else if(value < 800)
+        return BLACK;
+      else
         return AIR;
+    }
 }
 
 int notOnTrack(int leftTrack, int midTrack, int rightTrack)
@@ -233,17 +257,17 @@ int towardsStraight(int degree)
 
 void goBackIfNeeded()
 {
-  int leftTrack = getTrackType(analogRead(ir_sensor1));
-  int midTrack = getTrackType(analogRead(ir_sensor2));
-  int rightTrack = getTrackType(analogRead(ir_sensor3));
+  int leftTrack = getTrackType(analogRead(ir_sensor1), LEFT);
+  int midTrack = getTrackType(analogRead(ir_sensor2), MID);
+  int rightTrack = getTrackType(analogRead(ir_sensor3), RIGHT);
   while(leftTrack == GREY && midTrack == GREY && rightTrack == GREY)
   {
     setDirection(BACKWARD);
     // myservo.write(straightDegree);
     analogWrite(ENA, backSpeed);
 
-    leftTrack = getTrackType(analogRead(ir_sensor1));
-    midTrack = getTrackType(analogRead(ir_sensor2));
-    rightTrack = getTrackType(analogRead(ir_sensor3));
+    leftTrack = getTrackType(analogRead(ir_sensor1), LEFT);
+    midTrack = getTrackType(analogRead(ir_sensor2), MID);
+    rightTrack = getTrackType(analogRead(ir_sensor3), RIGHT);
   } 
 }
